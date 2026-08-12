@@ -1,0 +1,6 @@
+{
+  "name": "GrimTarot",
+  "description": "Aleister Crowley Thoth Tarot App mit offline Legesystemen: Tageskarte, 3-, 4-, 7-Karten und Liebeslegung mit detaillierter Crowley-Symbolik.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
