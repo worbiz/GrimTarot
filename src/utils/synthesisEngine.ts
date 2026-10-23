@@ -1,15 +1,23 @@
-import { DrawnCard, ElementType, TarotReading } from '../types/tarot';
+import { DrawnCard, ElementType, TarotReading, SpreadId } from '../types/tarot';
+import { getPositionInterpretationDetail } from '../data/interpretations';
 
 export interface SynthesisResult {
   dominantElement: ElementType;
   elementCounts: Record<ElementType, number>;
   majorCount: number;
   minorCount: number;
+  reversedCount: number;
   summary: string;
   elementalAdvice: string;
+  reversedAdvice?: string;
 }
 
-export function generateReadingSynthesis(drawnCards: DrawnCard[], spreadName: string, question?: string): SynthesisResult {
+export function generateReadingSynthesis(
+  drawnCards: DrawnCard[],
+  spreadName: string,
+  question?: string,
+  spreadId?: SpreadId
+): SynthesisResult {
   const elementCounts: Record<ElementType, number> = {
     Feuer: 0,
     Wasser: 0,
@@ -20,6 +28,7 @@ export function generateReadingSynthesis(drawnCards: DrawnCard[], spreadName: st
 
   let majorCount = 0;
   let minorCount = 0;
+  let reversedCount = 0;
 
   drawnCards.forEach(dc => {
     const el = dc.card.element;
@@ -33,6 +42,10 @@ export function generateReadingSynthesis(drawnCards: DrawnCard[], spreadName: st
       majorCount++;
     } else {
       minorCount++;
+    }
+
+    if (dc.isReversed) {
+      reversedCount++;
     }
   });
 
@@ -74,20 +87,47 @@ export function generateReadingSynthesis(drawnCards: DrawnCard[], spreadName: st
     arcanaSummary = `Ausnahmslos Kleine Arkana (${minorCount} Karten). Das Thema liegt stark im praktischen Handlungsspielraum deines täglichen Lebens und kann von dir direkt beeinflusst werden.`;
   }
 
-  // Synthesis summary string creation
-  const cardNamesList = drawnCards.map(d => `"${d.card.nameGerman}" (${d.positionTitle})`).join(', ');
+  // Reversed cards analysis based on user definition: blocked, delayed, internalized energy
+  let reversedSummary = '';
+  let reversedAdvice = '';
+  if (reversedCount > 0) {
+    if (reversedCount === total) {
+      reversedAdvice = `Alle ${reversedCount} Karten liegen auf dem Kopf. Deine Energien sind gegenwärtig fast vollständig nach innen gerichtet oder pausieren. Erzwinge nichts im Außen; betrachte die Herausforderungen als Reifungsprozess.`;
+    } else if (reversedCount >= Math.ceil(total / 2)) {
+      reversedAdvice = `${reversedCount} von ${total} Karten liegen umgekehrt (Kopfstand). Dies signalisiert innere Konflikte, Widerstände oder verzögerte Abläufe. Es ist kein negatives Omen, sondern verweist auf ungenutzte Chancen, die durch ehrliche Selbstreflexion freigesetzt werden können.`;
+    } else {
+      reversedAdvice = `${reversedCount} Karte(n) liegen auf dem Kopf. An diesen Stellen stockt der gewohnte Fluss. Ein bewusster Perspektivwechsel hilft, die Blockade aufzulösen.`;
+    }
+    reversedSummary = `\n\nOrientierung & Dynamik:\n${reversedAdvice}`;
+  }
 
-  let summary = `Für die Legung "${spreadName}" ${question ? `zur Frage "${question}"` : ''} wurden die Karten ${cardNamesList} gezogen.\n\n${arcanaSummary}\n\nElementares Übergewicht: ${dominantElement}. ${elementalAdvice}`;
+  // Synthesis summary string creation
+  const cardNamesList = drawnCards.map(d => `"${d.card.nameGerman}"${d.isReversed ? ' (Umgekehrt)' : ''} (${d.positionTitle})`).join(', ');
+
+  let positionHighlights = '';
+  if (spreadId) {
+    const highlights = drawnCards.map(d => {
+      const detail = getPositionInterpretationDetail(d.card, spreadId, d.positionIndex, !!d.isReversed);
+      const revNote = d.isReversed ? ' [Kopfstand/Umgekehrt]' : '';
+      return `• ${d.positionTitle} ("${d.card.nameGerman}"${revNote}): ${detail.actionAdvice}`;
+    }).join('\n');
+    positionHighlights = `\n\nZentrale Impulse der Positionen:\n${highlights}`;
+  }
+
+  let summary = `Für die Legung "${spreadName}" ${question ? `zur Frage "${question}"` : ''} wurden die Karten ${cardNamesList} gezogen.\n\n${arcanaSummary}\n\nElementares Übergewicht: ${dominantElement}. ${elementalAdvice}${reversedSummary}${positionHighlights}`;
 
   return {
     dominantElement,
     elementCounts,
     majorCount,
     minorCount,
+    reversedCount,
     summary,
-    elementalAdvice
+    elementalAdvice,
+    reversedAdvice
   };
 }
+
 
 export function saveReadingToJournal(reading: TarotReading): void {
   try {

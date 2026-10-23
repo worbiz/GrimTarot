@@ -43,7 +43,8 @@ ${JSON.stringify(drawnCards, null, 2)}
 Achte besonders auf:
 1. Das Zusammenspiel der Crowley Thoth Symbolik (Elemente, Atu, Astrologie, Hofkarten).
 2. Konkrete, lebensnahe Ratschläge ohne Schwarzmalerei.
-3. Halte die Zusammenfassung prägnant (ca. 150-250 Wörter), tiefgründig und inspirierend.`;
+3. Wenn Karten 'isReversed: true' (auf dem Kopf stehend) sind: Beachte, dass dies signalisiert, dass die Energie blockiert, verzögert oder nach innen gerichtet ist. Es ist kein rein negatives Omen, sondern zeigt eine Herausforderung oder ungenutzte Chance an.
+4. Halte die Zusammenfassung prägnant (ca. 150-250 Wörter), tiefgründig und inspirierend.`;
 
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',

@@ -22,6 +22,7 @@ export interface ThothCard {
     advice: string;
   };
   shadowMeaning: string; // Elemental dignity / Schattenseite
+  imageUrl?: string;
   colorTheme: {
     primary: string;
     secondary: string;
@@ -30,7 +31,14 @@ export interface ThothCard {
   };
 }
 
-export type SpreadId = 'tageskarte' | 'drei_karten' | 'vier_karten' | 'sieben_karten' | 'liebes_beziehung';
+export type SpreadId =
+  | 'tageskarte'
+  | 'drei_karten'
+  | 'vier_karten'
+  | 'sieben_karten'
+  | 'liebes_beziehung'
+  | 'thelemisches_kreuz'
+  | 'astrologische_haeuser';
 
 export interface PositionDef {
   index: number;
@@ -47,7 +55,7 @@ export interface SpreadDef {
   iconName: string;
   description: string;
   positions: PositionDef[];
-  layoutType: 'line' | 'cross' | 'horseshoe' | 'relationship';
+  layoutType: 'line' | 'cross' | 'horseshoe' | 'relationship' | 'thelemic_cross' | 'zodiac_circle';
 }
 
 export interface DrawnCard {
@@ -70,5 +78,57 @@ export interface TarotReading {
     majorCount: number;
     summary: string;
     elementalAdvice: string;
+  };
+}export interface CardSpreadPositionData {
+  tageskarte: {
+    fokus: string;
+    ratschlag: string;
+    energie: string;
+  };
+  drei_karten: {
+    vergangenheit: string;
+    gegenwart: string;
+    zukunft: string;
+  };
+  vier_karten: {
+    thema: string;
+    vermeiden: string;
+    ratschlag: string;
+    ziel: string;
+  };
+  sieben_karten: {
+    vergangenheit: string;
+    gegenwart: string;
+    verborgen: string;
+    wendepunkt: string;
+    umfeld: string;
+    hoffnungAngst: string;
+    ergebnis: string;
+  };
+  liebes_beziehung: {
+    dynamik: string;
+    selbst: string;
+    partner: string;
+    staerke: string;
+    rat: string;
+  };
+}
+
+export interface PositionInterpretationDetail {
+  spreadId: SpreadId;
+  spreadName: string;
+  positionIndex: number;
+  positionTitle: string;
+  positionRole: string;
+  interpretation: string;
+  esotericContext: string;
+  actionAdvice: string;
+  shadowWarning?: string;
+  isReversed?: boolean;
+  reversedDynamic?: {
+    blockedEnergy: string;
+    internalizedFocus: string;
+    hiddenOpportunity: string;
+    unblockAdvice: string;
   };
 }

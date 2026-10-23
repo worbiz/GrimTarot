@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { SpreadDef, DrawnCard, ThothCard } from '../types/tarot';
 import { THOTH_DECK } from '../data/thothDeck';
 import { ThothCardView } from './ThothCardView';
-import { RefreshCw, Sparkles, CheckCircle2, Shuffle, Hand, ArrowLeft } from 'lucide-react';
+import { Shuffle, Hand, ArrowLeft, Eye, RotateCw, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { CARD_BACK_IMAGE } from '../data/cardArtworks';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface CardShuffleDrawProps {
   spread: SpreadDef;
@@ -20,153 +22,293 @@ export const CardShuffleDraw: React.FC<CardShuffleDrawProps> = ({
 }) => {
   const [shuffledDeck, setShuffledDeck] = useState<ThothCard[]>([]);
   const [isShuffling, setIsShuffling] = useState(false);
-  const [shuffleCount, setShuffleCount] = useState(0);
   const [drawnCards, setDrawnCards] = useState<DrawnCard[]>([]);
   const [activePositionIndex, setActivePositionIndex] = useState(0);
+  const {
+    t,
+    getCardName,
+    getCardThothTitle,
+    getSpreadName,
+    getPositionTitle,
+    getPositionDescription
+  } = useLanguage();
 
-  // Initialize shuffled deck on mount
+  // 3D Flip Reveal State
+  const [revealingCard, setRevealingCard] = useState<{
+    drawn: DrawnCard;
+    isFlipped: boolean;
+  } | null>(null);
+
+  // Reversed Cards Mode (User configurable, default enabled as requested)
+  const [allowReversed, setAllowReversed] = useState<boolean>(() => {
+    const saved = localStorage.getItem('grimtarot_allow_reversed');
+    return saved !== null ? saved === 'true' : true;
+  });
+  const [showReversalInfo, setShowReversalInfo] = useState(false);
+
+  const toggleAllowReversed = () => {
+    setAllowReversed(prev => {
+      const next = !prev;
+      localStorage.setItem('grimtarot_allow_reversed', String(next));
+      return next;
+    });
+  };
+
+  // Initialize shuffled deck
   useEffect(() => {
     shuffleDeck();
   }, []);
 
   const shuffleDeck = () => {
     setIsShuffling(true);
+    setRevealingCard(null);
     setTimeout(() => {
       const deckCopy = [...THOTH_DECK];
-      // Fisher-Yates shuffle
       for (let i = deckCopy.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [deckCopy[i], deckCopy[j]] = [deckCopy[j], deckCopy[i]];
       }
       setShuffledDeck(deckCopy);
       setIsShuffling(false);
-      setShuffleCount(prev => prev + 1);
     }, 600);
   };
 
   const handleDrawCard = (cardIndexInDeck: number) => {
-    if (drawnCards.length >= spread.cardCount || isShuffling) return;
+    if (drawnCards.length >= spread.cardCount || isShuffling || revealingCard) return;
 
     const selectedCard = shuffledDeck[cardIndexInDeck];
     const currentPos = spread.positions[activePositionIndex];
+    const posTitle = getPositionTitle(spread.id, currentPos.index, currentPos.title);
+
+    // Realistic reversal probability when deck halves are inverted (~35% chance)
+    const isCardReversed = allowReversed ? Math.random() < 0.35 : false;
 
     const newDrawn: DrawnCard = {
       positionIndex: currentPos.index,
-      positionTitle: currentPos.title,
-      card: selectedCard
+      positionTitle: posTitle,
+      card: selectedCard,
+      isReversed: isCardReversed
     };
 
-    const nextDrawn = [...drawnCards, newDrawn];
-    setDrawnCards(nextDrawn);
-
-    // Remove drawn card from available deck
+    // Remove from deck
     const updatedDeck = shuffledDeck.filter((_, idx) => idx !== cardIndexInDeck);
     setShuffledDeck(updatedDeck);
 
-    if (nextDrawn.length < spread.cardCount) {
-      setActivePositionIndex(prev => prev + 1);
-    } else {
-      // Completed drawing all cards!
-      setTimeout(() => {
-        onCompleteReading(nextDrawn);
-      }, 800);
-    }
+    // Trigger Mystical 3D Flip Ritual
+    setRevealingCard({
+      drawn: newDrawn,
+      isFlipped: false
+    });
+
+    // Start 3D Flip Animation
+    setTimeout(() => {
+      setRevealingCard(prev => (prev ? { ...prev, isFlipped: true } : null));
+    }, 250);
+
+    // After flip animation concludes, commit to drawn collection
+    setTimeout(() => {
+      const nextDrawn = [...drawnCards, newDrawn];
+      setDrawnCards(nextDrawn);
+      setRevealingCard(null);
+
+      if (nextDrawn.length < spread.cardCount) {
+        setActivePositionIndex(prev => prev + 1);
+      } else {
+        setTimeout(() => {
+          onCompleteReading(nextDrawn);
+        }, 900);
+      }
+    }, 1700);
   };
 
   const handleDrawAll = () => {
-    if (isShuffling) return;
+    if (isShuffling || revealingCard) return;
     const cardsToTake = shuffledDeck.slice(0, spread.cardCount);
     const newDrawnCards: DrawnCard[] = cardsToTake.map((card, idx) => ({
       positionIndex: spread.positions[idx].index,
-      positionTitle: spread.positions[idx].title,
-      card
+      positionTitle: getPositionTitle(spread.id, spread.positions[idx].index, spread.positions[idx].title),
+      card,
+      isReversed: allowReversed ? Math.random() < 0.35 : false
     }));
 
     setDrawnCards(newDrawnCards);
     setTimeout(() => {
       onCompleteReading(newDrawnCards);
-    }, 600);
+    }, 800);
   };
 
   const currentPosDef = spread.positions[activePositionIndex];
+  const currentPosTitle = currentPosDef ? getPositionTitle(spread.id, currentPosDef.index, currentPosDef.title) : '';
+  const currentPosDesc = currentPosDef ? getPositionDescription(spread.id, currentPosDef.index, currentPosDef.description) : '';
 
   return (
-    <div className="space-y-6 pb-24 px-4 min-h-[85vh] flex flex-col justify-between">
-      {/* Top Bar */}
+    <div className="space-y-6 pb-28 px-4 min-h-[85vh] flex flex-col justify-between select-none">
+      {/* Top Header Section */}
       <div>
-        <div className="flex items-center justify-between py-2">
+        <div className="flex items-center justify-between py-2 border-b border-[#27272a]">
           <button
             onClick={onBack}
-            className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white px-2 py-1 rounded-lg bg-slate-900 border border-zinc-800"
+            className="flex items-center gap-1.5 text-xs text-[#a1a1aa] hover:text-[#f4f4f5] px-3 py-1.5 rounded bg-[#121214] border border-[#27272a] hover:border-[#c5a059]/40 transition cursor-pointer"
           >
-            <ArrowLeft className="w-4 h-4" /> Zurück
+            <ArrowLeft className="w-3.5 h-3.5" /> {t('backToSpreadsBtn', 'Zurück')}
           </button>
           <div className="text-right">
-            <span className="text-xs font-serif font-bold text-amber-200 block">{spread.name}</span>
-            <span className="text-[10px] text-zinc-400 font-mono">
-              {drawnCards.length} / {spread.cardCount} Karten gezogen
+            <span className="text-sm font-serif font-bold text-[#f4f4f5] block">
+              {getSpreadName(spread.id, spread.name)}
+            </span>
+            <span className="text-[10px] text-[#71717a] font-mono uppercase tracking-wider">
+              {drawnCards.length} / {spread.cardCount} {t('drawnCardsProgress', 'gezogen')}
             </span>
           </div>
         </div>
 
         {question && (
-          <div className="p-3 rounded-xl bg-purple-950/40 border border-purple-500/30 text-xs text-purple-200 mt-2">
-            <span className="font-bold text-amber-400 block text-[10px] uppercase">Deine Frage:</span>
-            "{question}"
+          <div className="p-3 rounded bg-[#121214] border border-[#c5a059]/30 text-xs text-[#a1a1aa] mt-3">
+            <span className="font-bold text-[#c5a059] block text-[9px] uppercase tracking-widest">
+              {t('questionAsked', 'Deine Frage')}:
+            </span>
+            <span className="text-[#f4f4f5] italic">"{question}"</span>
           </div>
         )}
       </div>
 
-      {/* Main Drawing Area */}
-      <div className="flex-1 flex flex-col items-center justify-center my-4 space-y-6">
-        {/* Instruction Card */}
+      {/* Main Drawing & 3D Flip Stage */}
+      <div className="flex-1 flex flex-col items-center justify-center my-3 space-y-5">
+        {/* Instruction Guidance */}
         {drawnCards.length < spread.cardCount ? (
-          <div className="text-center space-y-1.5 max-w-sm">
-            <span className="text-[11px] font-mono text-amber-400 uppercase tracking-widest bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20 inline-block">
-              Position #{activePositionIndex + 1}: {currentPosDef?.title}
-            </span>
-            <p className="text-xs text-zinc-300 italic">{currentPosDef?.description}</p>
+          <div className="text-center space-y-1 max-w-sm">
+            <div className="inline-flex items-center gap-1 text-[10px] font-mono text-[#c5a059] uppercase tracking-[0.2em] bg-[#c5a059]/10 px-3 py-1 rounded border border-[#c5a059]/30">
+              #{activePositionIndex + 1}: {currentPosTitle}
+            </div>
+            <p className="text-xs text-[#a1a1aa] italic pt-1">{currentPosDesc}</p>
           </div>
         ) : (
           <div className="text-center space-y-2">
-            <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto animate-bounce" />
-            <h3 className="text-xl font-serif font-bold text-amber-200">Alle Karten gezogen!</h3>
-            <p className="text-xs text-zinc-400">Erstelle jetzt die Auswertung deines Thoth Orakels...</p>
+            <CheckCircle2 className="w-8 h-8 text-[#c5a059] mx-auto animate-pulse" />
+            <h3 className="text-lg font-serif font-bold text-[#f4f4f5]">
+              {t('readingCompletedTitle', 'Alle Karten wurden gezogen')}
+            </h3>
+            <p className="text-xs text-[#71717a]">
+              {t('shuffling', 'Berechne die kosmische Synthese...')}
+            </p>
           </div>
         )}
 
-        {/* Deck Fan or Stack */}
-        <div className="relative w-full max-w-md h-64 flex items-center justify-center my-2">
-          <AnimatePresence>
+        {/* Dynamic Center Stage: 3D Flip Reveal or Card Deck Fan */}
+        <div className="relative w-full max-w-md h-72 flex items-center justify-center">
+          <AnimatePresence mode="wait">
             {isShuffling ? (
               <motion.div
+                key="shuffling"
                 initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1, rotate: [0, 10, -10, 0] }}
-                className="flex items-center gap-2 text-amber-300 text-sm font-semibold"
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                className="flex flex-col items-center gap-3 text-[#c5a059] text-xs uppercase tracking-widest font-mono"
               >
-                <RefreshCw className="w-6 h-6 animate-spin text-amber-400" />
-                Mische 78 Thoth Tarot Karten...
+                <div className="w-12 h-12 rounded-full border border-[#c5a059]/40 flex items-center justify-center bg-[#121214]">
+                  <RotateCw className="w-6 h-6 animate-spin text-[#c5a059]" />
+                </div>
+                <span>{t('shuffling', 'Mische das Deck...')}</span>
+              </motion.div>
+            ) : revealingCard ? (
+              /* ==================================================== */
+              /* MYSTICAL 3D FLIP REVEAL ANIMATION STAGE              */
+              /* ==================================================== */
+              <motion.div
+                key="revealing-stage"
+                initial={{ scale: 0.5, y: 40, opacity: 0 }}
+                animate={{ scale: 1.15, y: 0, opacity: 1 }}
+                exit={{ scale: 0.6, y: -40, opacity: 0 }}
+                transition={{ duration: 0.5, ease: 'easeOut' }}
+                className="relative flex flex-col items-center justify-center"
+              >
+                {/* Mystical Halo Aura Glow */}
+                <div className="absolute -inset-10 bg-[radial-gradient(circle_at_center,#c5a059_0%,transparent_70%)] opacity-30 animate-pulse pointer-events-none" />
+
+                {/* 3D Flip Card Container */}
+                <div className="relative w-44 h-68 perspective-1000">
+                  <div
+                    className={`w-full h-full duration-1000 transform-style-3d transition-transform ${
+                      revealingCard.isFlipped ? '' : 'rotate-y-180'
+                    }`}
+                  >
+                    {/* Front Face (Revealed) */}
+                    <div className="absolute inset-0 backface-hidden shadow-[0_0_40px_rgba(197,160,89,0.25)] rounded-lg">
+                      <ThothCardView
+                        card={revealingCard.drawn.card}
+                        size="lg"
+                        isFlipped={true}
+                        isReversed={revealingCard.drawn.isReversed}
+                        positionTitle={revealingCard.drawn.positionTitle}
+                      />
+                    </div>
+
+                    {/* Back Face (Before Flip) */}
+                    <div className="absolute inset-0 rounded-lg border-2 border-[#c5a059] bg-[#0a0a0b] p-2 flex flex-col items-center justify-center overflow-hidden rotate-y-180 backface-hidden shadow-[0_0_30px_rgba(0,0,0,0.9)]">
+                      <img
+                        src={CARD_BACK_IMAGE}
+                        alt="Card Back"
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover rounded filter contrast-125 brightness-90"
+                      />
+                      <div className="absolute inset-0 bg-[#c5a059]/10 pointer-events-none" />
+                    </div>
+                  </div>
+                </div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="mt-2 text-center max-w-xs px-2"
+                >
+                  <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#c5a059] block">
+                    {revealingCard.drawn.positionTitle}
+                  </span>
+                  <span className="text-sm font-serif font-bold text-[#f4f4f5] block mt-0.5">
+                    {getCardName(revealingCard.drawn.card)}{' '}
+                    {getCardThothTitle(revealingCard.drawn.card)
+                      ? `• "${getCardThothTitle(revealingCard.drawn.card)}"`
+                      : ''}
+                  </span>
+                  {revealingCard.drawn.isReversed && (
+                    <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-mono uppercase bg-[#1e1408] text-[#e69d45] border border-[#e69d45]/60 px-2 py-0.5 rounded-full shadow">
+                      ↷ {t('orientationReversed', 'Umgekehrt (Kopfstand)')}
+                    </span>
+                  )}
+                </motion.div>
               </motion.div>
             ) : (
+              /* ==================================================== */
+              /* ARCANA FAN TO CHOOSE FROM                           */
+              /* ==================================================== */
               <div className="relative w-full h-full flex items-center justify-center">
-                {/* Fan of Cards */}
                 {shuffledDeck.slice(0, 15).map((card, idx) => {
                   const rotation = (idx - 7) * 4;
-                  const xOffset = (idx - 7) * 12;
+                  const xOffset = (idx - 7) * 11;
 
                   return (
                     <motion.div
                       key={card.id}
                       initial={{ scale: 0, y: 50 }}
                       animate={{ scale: 1, y: 0, rotate: rotation, x: xOffset }}
-                      whileHover={{ y: -20, scale: 1.05 }}
+                      whileHover={{ y: -24, scale: 1.08, zIndex: 50 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => handleDrawCard(idx)}
-                      className="absolute cursor-pointer rounded-xl border-2 border-amber-500/40 bg-gradient-to-br from-slate-950 via-purple-950 to-zinc-950 w-28 h-44 p-2 shadow-2xl flex flex-col justify-between"
-                      style={{ zIndex: 20 - idx }}
+                      className="absolute cursor-pointer rounded-lg border border-[#c5a059]/40 bg-[#0a0a0b] w-24 h-40 p-1 shadow-2xl transition-shadow hover:shadow-[0_0_25px_rgba(197,160,89,0.3)] hover:border-[#c5a059]"
+                      style={{ zIndex: 20 - Math.abs(idx - 7) }}
                     >
-                      <div className="w-full h-full rounded-lg border border-amber-500/20 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-amber-900/30 via-purple-900/20 to-black flex items-center justify-center p-2">
-                        <Sparkles className="w-5 h-5 text-amber-400/70" />
+                      <div className="w-full h-full rounded border border-[#27272a] bg-[#121214] flex flex-col items-center justify-between p-2 relative overflow-hidden">
+                        <img
+                          src={CARD_BACK_IMAGE}
+                          alt="Deck"
+                          referrerPolicy="no-referrer"
+                          className="absolute inset-0 w-full h-full object-cover opacity-80"
+                        />
+                        <div className="absolute inset-0 bg-[#0a0a0b]/40 pointer-events-none" />
+                        <div className="relative z-10 w-6 h-6 rounded-full border border-[#c5a059]/40 flex items-center justify-center bg-[#0a0a0b]/80 my-auto">
+                          <Eye className="w-3.5 h-3.5 text-[#c5a059]" />
+                        </div>
                       </div>
                     </motion.div>
                   );
@@ -176,17 +318,66 @@ export const CardShuffleDraw: React.FC<CardShuffleDrawProps> = ({
           </AnimatePresence>
         </div>
 
-        {/* Drawn Cards Mini Preview */}
+        {/* Reversed Cards Toggle & Philosophy Info Bar */}
+        <div className="w-full max-w-md mx-auto p-2.5 rounded-lg bg-[#121214] border border-[#27272a] text-xs flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <RotateCw className={`w-3.5 h-3.5 transition-colors ${allowReversed ? 'text-[#e69d45]' : 'text-[#71717a]'}`} />
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-mono font-medium text-[#f4f4f5]">
+                  {t('allowReversedCards', 'Karten auf dem Kopf (Kopfstand)')}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowReversalInfo(true)}
+                  className="text-[#c5a059] hover:text-[#f4f4f5] text-[10px] font-mono underline cursor-pointer"
+                  title="Deutungs-Philosophie"
+                >
+                  ℹ
+                </button>
+              </div>
+              <span className="text-[9px] text-[#71717a] block leading-tight">
+                {allowReversed
+                  ? t('reversedCardsActive', 'Aktiv: blockierte, verzögerte & innere Energie')
+                  : t('onlyUprightMode', 'Nur aufrechte Karten')}
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={toggleAllowReversed}
+            className={`px-3 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition cursor-pointer font-bold ${
+              allowReversed
+                ? 'bg-[#e69d45] text-[#0a0a0b] shadow'
+                : 'bg-[#18181b] text-[#71717a] border border-[#27272a] hover:text-[#d4d4d8]'
+            }`}
+          >
+            {allowReversed ? 'AN' : 'AUS'}
+          </button>
+        </div>
+
+        {/* Drawn Cards Mini Gallery */}
         {drawnCards.length > 0 && (
-          <div className="w-full max-w-md">
-            <span className="text-[10px] font-mono text-zinc-400 block text-center mb-2">Gezogene Karten:</span>
-            <div className="flex items-center justify-center gap-2 overflow-x-auto pb-2">
+          <div className="w-full max-w-md p-3 rounded-lg bg-[#121214] border border-[#27272a]">
+            <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-[#71717a] block text-center mb-2">
+              {t('cardsInSpread', 'Karten')} ({drawnCards.length})
+            </span>
+            <div className="flex items-center justify-center gap-2.5 overflow-x-auto py-1">
               {drawnCards.map((drawn, idx) => (
                 <div key={idx} className="flex-shrink-0 text-center">
-                  <ThothCardView card={drawn.card} size="sm" isFlipped={true} />
-                  <span className="text-[9px] text-amber-300 font-mono block mt-1 truncate max-w-[80px]">
-                    {drawn.positionTitle}
-                  </span>
+                  <ThothCardView
+                    card={drawn.card}
+                    size="sm"
+                    isFlipped={true}
+                    isReversed={drawn.isReversed}
+                    showDetailsOnTap={true}
+                  />
+                  <div className="mt-1 flex items-center justify-center gap-0.5">
+                    {drawn.isReversed && <span className="text-[#e69d45] text-[8px] font-mono">↷</span>}
+                    <span className="text-[9px] text-[#c5a059] font-mono truncate max-w-[70px]">
+                      {drawn.positionTitle}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -194,26 +385,81 @@ export const CardShuffleDraw: React.FC<CardShuffleDrawProps> = ({
         )}
       </div>
 
-      {/* Control Buttons */}
+      {/* Philosophy Modal for Reversed Cards */}
+      {showReversalInfo && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4 animate-fade-in"
+          onClick={() => setShowReversalInfo(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-xl border border-[#c5a059]/40 bg-[#121214] p-5 space-y-4 text-xs text-[#d4d4d8] shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between border-b border-[#27272a] pb-2">
+              <div>
+                <span className="text-[9px] font-mono text-[#c5a059] uppercase tracking-widest block">
+                  GrimTarot Weisheit
+                </span>
+                <h4 className="text-base font-serif font-bold text-[#f4f4f5]">
+                  {t('allowReversedCards', 'Karten auf dem Kopf (Kopfstand)')}
+                </h4>
+              </div>
+              <button
+                onClick={() => setShowReversalInfo(false)}
+                className="text-[#71717a] hover:text-[#f4f4f5] p-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-2.5 text-xs leading-relaxed">
+              <p className="text-[#f4f4f5] font-serif italic bg-[#18181b] p-3 rounded border border-[#c5a059]/20">
+                "Wenn eine Tarotkarte auf dem Kopf steht, signalisiert dies in der Regel, dass die Energie der Karte blockiert, verzögert oder nach innen gerichtet ist. Es bedeutet nicht automatisch das Gegenteil oder eine rein negative Bedeutung, sondern zeigt oft eine Herausforderung an, die bewältigt werden muss, oder eine Chance, die noch nicht voll ausgeschöpft ist."
+              </p>
+              <div className="space-y-1.5 pt-1">
+                <p>
+                  <strong className="text-[#c5a059] font-mono text-[10px] uppercase">Interpretation:</strong> Die umgekehrte Karte kann auf Widerstand, innere Konflikte oder eine andere Perspektive hinweisen.
+                </p>
+                <p>
+                  <strong className="text-[#c5a059] font-mono text-[10px] uppercase">Umgang:</strong> Einige Kartenleger ignorieren umgedrehte Karten oder deuten sie als verstärkte Aspekte. Die genaue Deutung hängt vom Legemuster und der Intuition ab.
+                </p>
+                <p>
+                  <strong className="text-[#c5a059] font-mono text-[10px] uppercase">Entstehung:</strong> Karten liegen verkehrt herum, wenn sie beim Mischen (durch Verdrehen des Stapels) auf den Kopf gedreht werden.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowReversalInfo(false)}
+              className="w-full py-2 rounded bg-[#c5a059] text-[#0a0a0b] font-bold text-xs uppercase tracking-wider cursor-pointer"
+            >
+              {t('closeModal', 'Verstanden')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Control Actions */}
       <div className="grid grid-cols-2 gap-3 max-w-md mx-auto w-full">
         <button
           onClick={shuffleDeck}
-          disabled={isShuffling}
-          className="py-3 px-4 rounded-xl bg-slate-900 border border-zinc-700 text-zinc-200 font-semibold text-xs flex items-center justify-center gap-2 hover:bg-slate-800 transition disabled:opacity-50"
+          disabled={isShuffling || !!revealingCard}
+          className="py-3 px-4 rounded border border-[#27272a] bg-[#121214] text-[#d4d4d8] font-sans text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:border-[#c5a059]/40 hover:bg-[#1a1a1c] transition disabled:opacity-40 cursor-pointer"
         >
-          <Shuffle className="w-4 h-4 text-amber-400" />
-          <span>Nochmals mischen</span>
+          <Shuffle className="w-3.5 h-3.5 text-[#c5a059]" />
+          <span>{t('shuffleBtn', 'Deck neu mischen')}</span>
         </button>
 
         <button
           onClick={handleDrawAll}
-          disabled={isShuffling || drawnCards.length >= spread.cardCount}
-          className="py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg hover:bg-amber-300 transition disabled:opacity-50"
+          disabled={isShuffling || !!revealingCard || drawnCards.length >= spread.cardCount}
+          className="py-3 px-4 rounded bg-[#c5a059] text-[#0a0a0b] font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-[#c5a059]/10 hover:bg-[#d8b46e] transition disabled:opacity-40 cursor-pointer"
         >
-          <Hand className="w-4 h-4" />
-          <span>{spread.cardCount === 1 ? 'Karte ziehen' : 'Alle ziehen'}</span>
+          <Hand className="w-3.5 h-3.5" />
+          <span>{spread.cardCount === 1 ? t('dailyRitualButton', 'Karte ziehen') : t('cardsCountLabel', 'Alle ziehen')}</span>
         </button>
       </div>
     </div>
   );
 };
+
