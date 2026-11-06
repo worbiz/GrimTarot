@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sparkles, Globe, ShieldCheck, Cpu, HardDrive, Lock } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
+import { OfflineInstallersHub } from './OfflineInstallersHub';
 
 export const InfoView: React.FC = () => {
   const { t } = useLanguage();
@@ -70,6 +71,9 @@ export const InfoView: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {/* Offline Installers Section for Android, Windows, Linux (.apk, .exe, .deb, .appimage, .rpm, .run) */}
+      <OfflineInstallersHub />
 
       {/* Website / Repository Link */}
       <div className="pt-2">

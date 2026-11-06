@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
@@ -66,6 +67,18 @@ Achte besonders auf:
   // Health check endpoint
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', app: 'GrimTarot' });
+  });
+
+  // Dedicated route for standalone offline installer packages with download headers
+  app.get('/downloads/:filename', (req, res, next) => {
+    const filename = path.basename(req.params.filename);
+    const pubFile = path.join(process.cwd(), 'public', 'downloads', filename);
+    const distFile = path.join(process.cwd(), 'dist', 'downloads', filename);
+    const targetFile = fs.existsSync(pubFile) ? pubFile : distFile;
+    if (fs.existsSync(targetFile)) {
+      return res.download(targetFile, filename);
+    }
+    next();
   });
 
   // Vite middleware for development vs static serve for production
