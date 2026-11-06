@@ -1,10 +1,12 @@
-import React from 'react';
-import { Sparkles, Globe, ShieldCheck, Cpu, HardDrive, Lock } from 'lucide-react';
+import React, { useState } from 'react';
+import { Sparkles, Globe, ShieldCheck, Cpu, HardDrive, Lock, ShieldAlert } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { OfflineInstallersHub } from './OfflineInstallersHub';
+import { SecurityAuditModal } from './SecurityAuditModal';
 
 export const InfoView: React.FC = () => {
   const { t } = useLanguage();
+  const [isSecurityAuditOpen, setIsSecurityAuditOpen] = useState(false);
 
   return (
     <div className="space-y-6 pb-28 px-4 text-center max-w-md mx-auto animate-fade-in">
@@ -71,6 +73,40 @@ export const InfoView: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {/* Security & Hardening Audit Button */}
+      <div className="pt-1">
+        <button
+          onClick={() => setIsSecurityAuditOpen(true)}
+          className="w-full flex items-center justify-between p-3.5 rounded-xl bg-gradient-to-r from-[#121214] via-[#1a1a1f] to-[#121214] border border-[#c5a059]/40 hover:border-[#c5a059] shadow-lg hover:shadow-[#c5a059]/10 transition-all cursor-pointer group"
+        >
+          <div className="flex items-center gap-3 text-left">
+            <div className="p-2 rounded-lg bg-[#c5a059]/15 border border-[#c5a059]/40 text-[#c5a059] group-hover:scale-105 transition-transform">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-serif font-bold text-xs text-[#f4f4f5] flex items-center gap-2">
+                <span>Sicherheits- & Härtungs-Audit</span>
+                <span className="font-mono text-[9px] bg-[#7ee787]/15 text-[#7ee787] px-2 py-0.5 rounded border border-[#7ee787]/30">
+                  MASVS Aktiv
+                </span>
+              </div>
+              <div className="font-mono text-[10px] text-[#a1a1aa] pt-0.5">
+                8 Säulen Härtungsplan, R8, Keystore-Vault & Zero-Secrets
+              </div>
+            </div>
+          </div>
+          <span className="text-xs text-[#c5a059] font-mono group-hover:translate-x-0.5 transition-transform">
+            →
+          </span>
+        </button>
+      </div>
+
+      {/* Security Audit Modal */}
+      <SecurityAuditModal
+        isOpen={isSecurityAuditOpen}
+        onClose={() => setIsSecurityAuditOpen(false)}
+      />
 
       {/* Offline Installers Section for Android, Windows, Linux (.apk, .exe, .deb, .appimage, .rpm, .run) */}
       <OfflineInstallersHub />

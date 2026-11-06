@@ -1,0 +1,6 @@
+{
+  "summary": "Implementierungsplan zur Optimierung der ProGuard-Regeln und Implementierung einer Startzeit-Integritätsprüfung mit Sicherheitswarnung:\n1. Bibliotheks-spezifische R8/ProGuard-Regeln für OkHttp3, AndroidX Security Crypto, WebKit, Kotlin Coroutines & Stdlib.\n2. Startzeit-Integritätsprüfung & Root-Erkennung in MainActivity.kt mitAlertDialog / Sicherheitswarnung bei kompromittierter Umgebung.\n3. Ergänzung der Integritätswarnungs-Visualisierung im Sicherheits-Audit-Dialog der App.",
+  "updatedAt": "2026-11-06T03:18:03.853235113Z",
+  "requestFeedback": true,
+  "userFacing": true
+}

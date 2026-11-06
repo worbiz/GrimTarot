@@ -37,7 +37,7 @@ const FALLBACK_PACKAGES: PackageInfo[] = [
     sizeBytes: 32000000,
     sizeFormatted: '31.8 MB',
     sha256: 'e89a42f8b5020718d044f56f189c4238ad8234857b1ce818c7d0d0879c32e541',
-    description: 'Direkt installierbare Android APK für Smartphones & Tablets (Android 5.0+)'
+    description: 'Gehärtetes Paket nach OWASP MASVS (Cleartext gesperrt, Zero-Secrets, No-Backup, 100% Offline)'
   },
   {
     id: 'windows',

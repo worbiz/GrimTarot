@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { TarotReading } from '../types/tarot';
 import { getSavedReadings, deleteSavedReading } from '../utils/synthesisEngine';
 import { ThothCardView } from './ThothCardView';
-import { History, Trash2, Calendar, Search, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { History, Trash2, Calendar, Search, ChevronDown, ChevronUp, Sparkles, FileDown } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
+import { exportTarotReadingToPDF } from '../utils/pdfExport';
 
 export const ReadingJournal: React.FC = () => {
   const [readings, setReadings] = useState<TarotReading[]>([]);
@@ -161,6 +162,29 @@ export const ReadingJournal: React.FC = () => {
                       <p className="italic">{reading.notes}</p>
                     </div>
                   )}
+
+                  {/* Export PDF Button */}
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        exportTarotReadingToPDF({
+                          spreadName: spreadDisplayName,
+                          question: reading.question,
+                          timestamp: reading.timestamp,
+                          drawnCards: reading.drawnCards,
+                          summaryText: reading.overallSynthesis.summary,
+                          userNotes: reading.notes,
+                          dominantElement: reading.overallSynthesis.dominantElement
+                        });
+                      }}
+                      className="w-full py-2.5 px-3 rounded bg-[#18181b] border border-[#c5a059]/40 text-[#c5a059] hover:bg-[#27272a] hover:border-[#c5a059] font-mono text-xs uppercase tracking-wider font-bold flex items-center justify-center gap-2 transition cursor-pointer shadow"
+                    >
+                      <FileDown className="w-4 h-4 text-[#c5a059]" />
+                      <span>Als PDF Exportieren</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

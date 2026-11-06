@@ -4,13 +4,14 @@ import { ThothCardView } from './ThothCardView';
 import { generateReadingSynthesis, saveReadingToJournal } from '../utils/synthesisEngine';
 import {
   Sparkles, Save, RotateCcw, RotateCw, BookOpen, Flame, Shield,
-  Compass, Check, AlertCircle, Layers, ArrowDownCircle, CircleDot, PlusCircle
+  Compass, Check, AlertCircle, Layers, ArrowDownCircle, CircleDot, PlusCircle, FileDown
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { getPositionInterpretationDetail } from '../data/interpretations';
 import { useLanguage } from '../i18n/LanguageContext';
 import { ElementalDignitiesView } from './ElementalDignitiesView';
 import { analyzeElementalDignities } from '../utils/elementalDignities';
+import { exportTarotReadingToPDF } from '../utils/pdfExport';
 
 interface ReadingResultProps {
   spread: SpreadDef;
@@ -690,12 +691,12 @@ export const ReadingResult: React.FC<ReadingResultProps> = ({
               className="w-full p-3 rounded bg-[#0a0a0b] border border-[#27272a] text-xs text-[#f4f4f5] placeholder-[#71717a] focus:outline-none focus:border-[#c5a059]"
             />
 
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <button
                 type="button"
                 onClick={handleSaveReading}
                 disabled={isSaved}
-                className={`flex-1 py-3 rounded text-xs font-mono uppercase tracking-wider font-bold flex items-center justify-center gap-2 transition cursor-pointer ${
+                className={`flex-1 py-3 px-3 rounded text-xs font-mono uppercase tracking-wider font-bold flex items-center justify-center gap-2 transition cursor-pointer ${
                   isSaved
                     ? 'bg-[#12281a] text-[#7ee787] border border-[#7ee787]/40'
                     : 'bg-[#c5a059] text-[#0a0a0b] hover:bg-[#d8b46e]'
@@ -703,6 +704,27 @@ export const ReadingResult: React.FC<ReadingResultProps> = ({
               >
                 {isSaved ? <Check className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
                 <span>{isSaved ? t('savedToJournal', '✓ Im Tagebuch gespeichert') : t('saveToJournalBtn', 'Im Tagebuch speichern')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  exportTarotReadingToPDF({
+                    spreadName: localizedSpreadName,
+                    question,
+                    timestamp: Date.now(),
+                    drawnCards: effectiveDrawnCards,
+                    summaryText: synthesis.summary,
+                    userNotes,
+                    dominantElement: synthesis.dominantElement,
+                    harmonyScore: elementalDignitiesSummary.harmonyScore,
+                    aiAnalysis
+                  });
+                }}
+                className="py-3 px-4 rounded bg-[#1a1a1c] border border-[#c5a059]/40 text-[#c5a059] hover:bg-[#27272a] hover:border-[#c5a059] text-xs font-mono uppercase tracking-wider font-bold flex items-center justify-center gap-2 transition cursor-pointer shadow-md"
+              >
+                <FileDown className="w-4 h-4 text-[#c5a059]" />
+                <span>PDF Exportieren</span>
               </button>
 
               {isSaved && (

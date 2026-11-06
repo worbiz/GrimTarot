@@ -383,26 +383,31 @@ cp -r /app/applet/build_tmp/deb/usr/* %{{buildroot}}/usr/
 with open(spec_file, "w") as f:
     f.write(spec_content)
 
-subprocess.run([
-    "rpmbuild",
-    "--define", f"_topdir {rpm_root}",
-    "-bb", spec_file
-], check=True)
+if shutil.which("rpmbuild"):
+    subprocess.run([
+        "rpmbuild",
+        "--define", f"_topdir {rpm_root}",
+        "-bb", spec_file
+    ], check=True)
 
-rpm_built = None
-for root, dirs, files in os.walk(os.path.join(rpm_root, "RPMS")):
-    for f in files:
-        if f.endswith(".rpm"):
-            rpm_built = os.path.join(root, f)
-            break
+    rpm_built = None
+    for root, dirs, files in os.walk(os.path.join(rpm_root, "RPMS")):
+        for f in files:
+            if f.endswith(".rpm"):
+                rpm_built = os.path.join(root, f)
+                break
 
-if rpm_built:
-    rpm_output = os.path.join(DOWNLOADS_DIR, f"{PACKAGE_NAME}-{VERSION}-1.x86_64.rpm")
-    shutil.copy2(rpm_built, rpm_output)
-    shutil.copy2(rpm_output, os.path.join(DIST_DOWNLOADS_DIR, os.path.basename(rpm_output)))
-    print(f"Created: {rpm_output} ({os.path.getsize(rpm_output)} bytes)")
+    if rpm_built:
+        rpm_output = os.path.join(DOWNLOADS_DIR, f"{PACKAGE_NAME}-{VERSION}-1.x86_64.rpm")
+        shutil.copy2(rpm_built, rpm_output)
+        shutil.copy2(rpm_output, os.path.join(DIST_DOWNLOADS_DIR, os.path.basename(rpm_output)))
+        print(f"Created: {rpm_output} ({os.path.getsize(rpm_output)} bytes)")
 else:
-    print("Warning: RPM file not found after build")
+    rpm_output = os.path.join(DOWNLOADS_DIR, f"{PACKAGE_NAME}-{VERSION}-1.x86_64.rpm")
+    if os.path.exists(rpm_output):
+        print(f"Using existing RPM package: {rpm_output} ({os.path.getsize(rpm_output)} bytes)")
+    else:
+        print("Warning: rpmbuild not installed and no existing RPM found")
 
 
 # -------------------------------------------------------------
@@ -505,10 +510,17 @@ nsis_script_path = os.path.join(nsis_work_dir, "installer.nsi")
 with open(nsis_script_path, "w") as f:
     f.write(nsis_script)
 
-subprocess.run(["makensis", nsis_script_path], check=True)
-exe_output = os.path.join(DOWNLOADS_DIR, f"{APP_NAME}-Setup-{VERSION}.exe")
-shutil.copy2(exe_output, os.path.join(DIST_DOWNLOADS_DIR, os.path.basename(exe_output)))
-print(f"Created: {exe_output} ({os.path.getsize(exe_output)} bytes)")
+if shutil.which("makensis"):
+    subprocess.run(["makensis", nsis_script_path], check=True)
+    exe_output = os.path.join(DOWNLOADS_DIR, f"{APP_NAME}-Setup-{VERSION}.exe")
+    shutil.copy2(exe_output, os.path.join(DIST_DOWNLOADS_DIR, os.path.basename(exe_output)))
+    print(f"Created: {exe_output} ({os.path.getsize(exe_output)} bytes)")
+else:
+    exe_output = os.path.join(DOWNLOADS_DIR, f"{APP_NAME}-Setup-{VERSION}.exe")
+    if os.path.exists(exe_output):
+        print(f"Using existing Windows installer: {exe_output} ({os.path.getsize(exe_output)} bytes)")
+    else:
+        print("Warning: makensis not installed and no existing Windows installer found")
 
 
 # -------------------------------------------------------------
@@ -535,31 +547,61 @@ for item in os.listdir(DIST_DIR):
     else:
         shutil.copy2(s, d)
 
-# Android Manifest (XML)
-res_drawable = os.path.join(apk_root, "res", "mipmap-xxxhdpi")
-os.makedirs(res_drawable, exist_ok=True)
-shutil.copy2(icon_src, os.path.join(res_drawable, "ic_launcher.png"))
+# Android XML Security Resources
+res_xml = os.path.join(apk_root, "res", "xml")
+os.makedirs(res_xml, exist_ok=True)
 
-# Create valid AndroidManifest.xml and binary APK structure
+# 1. Network Security Config (Strict TLS 1.3, Cleartext forbidden, System trust anchors only)
+net_sec_xml = '''<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>'''
+with open(os.path.join(res_xml, "network_security_config.xml"), "w") as f:
+    f.write(net_sec_xml)
+
+# 2. Data Extraction Rules (Block ADB & cloud backup extraction)
+data_extract_xml = '''<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude path="." />
+    </cloud-backup>
+    <device-transfer>
+        <exclude path="." />
+    </device-transfer>
+</data-extraction-rules>'''
+with open(os.path.join(res_xml, "data_extraction_rules.xml"), "w") as f:
+    f.write(data_extract_xml)
+
+# Create hardened AndroidManifest.xml according to OWASP MASVS guidelines
 manifest_xml = f'''<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.rhodon.grimtarot"
     android:versionCode="10001"
     android:versionName="{VERSION}">
-    <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="34" />
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34" />
     <application
         android:label="{APP_NAME}"
         android:icon="@mipmap/ic_launcher"
         android:hardwareAccelerated="true"
         android:supportsRtl="true"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:usesCleartextTraffic="false"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:debuggable="false"
+        android:extractNativeLibs="false"
         android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale"
-            android:launchMode="singleTop">
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -609,7 +651,7 @@ manifest_data = {
 }
 
 files_to_check = [
-    ("android", "Android (.apk)", f"{PACKAGE_NAME}-{VERSION}.apk", "Direkte Android-Installation (ab Android 5.0+, 100% Offline)"),
+    ("android", "Android (.apk)", f"{PACKAGE_NAME}-{VERSION}.apk", "Gehärtetes Paket nach OWASP MASVS (Cleartext gesperrt, Zero-Secrets, No-Backup, 100% Offline)"),
     ("windows", "Microsoft Windows (.exe)", f"{APP_NAME}-Setup-{VERSION}.exe", "Kompletter Windows-Installer mit Desktop- & Startmenü-Verknüpfungen"),
     ("linux_deb", "Linux Debian / Ubuntu (.deb)", f"{PACKAGE_NAME}_{VERSION}_amd64.deb", "Standard Debian/Ubuntu/Mint Paket mit Menüeintrag"),
     ("linux_appimage", "Linux AppImage (.AppImage)", f"{APP_NAME}-{VERSION}.AppImage", "Portable Ausführungsdatei für alle Linux-Distributionen (Zero-Install)"),

@@ -7,10 +7,10 @@
       "title": "Android (.apk)",
       "filename": "grimtarot-1.0.1.apk",
       "url": "/downloads/grimtarot-1.0.1.apk",
-      "sizeBytes": 32987880,
-      "sizeFormatted": "31.46 MB",
-      "sha256": "6031c346c20542c53381081618125d0385b137b8bfa5fb4fa644fbe1ac4a5f02",
-      "description": "Direkte Android-Installation (ab Android 5.0+, 100% Offline)"
+      "sizeBytes": 32558597,
+      "sizeFormatted": "31.05 MB",
+      "sha256": "936f7c75f3ca92da1929a53e7ca5b8e8a9e499802e7092d85d4d4c6fb46712a1",
+      "description": "Gehärtetes Paket nach OWASP MASVS (Cleartext gesperrt, Zero-Secrets, No-Backup, 100% Offline)"
     },
     {
       "id": "windows",
@@ -27,9 +27,9 @@
       "title": "Linux Debian / Ubuntu (.deb)",
       "filename": "grimtarot_1.0.1_amd64.deb",
       "url": "/downloads/grimtarot_1.0.1_amd64.deb",
-      "sizeBytes": 32161560,
-      "sizeFormatted": "30.67 MB",
-      "sha256": "84a46041433896f4d450d48df2a2d69eb49acaec9071d96ab91d6e190006eef2",
+      "sizeBytes": 32296912,
+      "sizeFormatted": "30.8 MB",
+      "sha256": "7a5424b74d4e1257cd2bcdc772d3da85f993ee395887259e2ba8264d22fe5ea6",
       "description": "Standard Debian/Ubuntu/Mint Paket mit Menüeintrag"
     },
     {
@@ -37,9 +37,9 @@
       "title": "Linux AppImage (.AppImage)",
       "filename": "GrimTarot-1.0.1.AppImage",
       "url": "/downloads/GrimTarot-1.0.1.AppImage",
-      "sizeBytes": 34122638,
-      "sizeFormatted": "32.54 MB",
-      "sha256": "2d3741418b482b7de1a714724fff76dabb00e597a3538ed062e2cf14a5d26931",
+      "sizeBytes": 34277552,
+      "sizeFormatted": "32.69 MB",
+      "sha256": "423131592cd8c7ccd700314a409c237e50339f517bdc3bddab52b09e3695e946",
       "description": "Portable Ausführungsdatei für alle Linux-Distributionen (Zero-Install)"
     },
     {
@@ -47,9 +47,9 @@
       "title": "Linux Fedora / RHEL / SUSE (.rpm)",
       "filename": "grimtarot-1.0.1-1.x86_64.rpm",
       "url": "/downloads/grimtarot-1.0.1-1.x86_64.rpm",
-      "sizeBytes": 33587543,
-      "sizeFormatted": "32.03 MB",
-      "sha256": "3ff33ebec75843bdc73afa053de1dbfd39b22d97df45f59a5528a5f66db57273",
+      "sizeBytes": 33746126,
+      "sizeFormatted": "32.18 MB",
+      "sha256": "98057ba889053a215a2305ca7be44d87d48132ebe14ce16a556a2e2c7c733cfc",
       "description": "RedHat, Fedora, CentOS und openSUSE Paket"
     },
     {
@@ -57,9 +57,9 @@
       "title": "Linux Universal Script (.run)",
       "filename": "grimtarot-1.0.1.run",
       "url": "/downloads/grimtarot-1.0.1.run",
-      "sizeBytes": 33535613,
-      "sizeFormatted": "31.98 MB",
-      "sha256": "4d6ad917853e351d4a1c4f3907dbac5e82f6f182c81a68d7b5f78472e4e862da",
+      "sizeBytes": 33690962,
+      "sizeFormatted": "32.13 MB",
+      "sha256": "1e27f3ce22f84e4ef7dcbb8d78e6456bfd4be9d8792588cfe595bf1577cdac09",
       "description": "Selbstentpackendes Universal-Installationsskript für jedes Linux"
     }
   ]
